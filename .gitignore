@@ -1,3 +1,9 @@
+# Data
+data/azurefunctions-dataset2019/invocations_per_function_md.anon.d*.csv
+data/azurefunctions-dataset2019/alldays_*.csv
+data/azurefunctions-dataset2019/by_owner_flat_invocations_*.csv
+data/azurefunctions-dataset2019/http_data.csv
+
 # MacOS files
 .DS_Store
 */.DS_Store
