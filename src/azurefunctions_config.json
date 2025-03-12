@@ -14,7 +14,7 @@
     "output_timesteps": 1,
     "n_input_features": 12,
     "n_output_vars": 1,
-    "merge_strategy": "simple_avg",
+    "merge_strategy": "age_weighted",
     "stop_criterion": "fixed_updates",
     "num_merged_models": 1,
     "epochs_per_update": 10,

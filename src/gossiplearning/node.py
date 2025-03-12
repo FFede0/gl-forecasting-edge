@@ -1,3 +1,5 @@
+from carbontracker.tracker import CarbonTracker
+
 import math
 from enum import IntEnum
 from pathlib import Path
@@ -84,6 +86,13 @@ class Node:
         self._marshal_weights_fn = marshal_weights_fn
         self._test_set = test_set
 
+        ct_folder = Path(self._workspace_dir / "tracker")
+        self._tracker = CarbonTracker(
+            epochs = self._training_config.epochs_per_update * self._training_config.fixed_updates, 
+            log_dir = ct_folder, 
+            log_file_prefix = f"node_{id}"
+        )
+
         # public state
         self.id = id
         self.accumulated_weight = 0
@@ -150,13 +159,14 @@ class Node:
         """
         if n_epochs < 1:
             raise Exception("Epochs number must be at least 1!")
-
+        
         model = self._create_model()
         model.set_weights(self._model.get_weights())
 
         best_val_loss = math.inf
         best_weights = None
         for i in range(n_epochs):
+            self._tracker.epoch_start()
             history = model.fit(
                 self.data["X_train"],
                 self.data["Y_train"],
@@ -167,6 +177,7 @@ class Node:
                 validation_batch_size=self._training_config.batch_size,
                 shuffle=self._training_config.shuffle_batch,
             ).history
+            self._tracker.epoch_end()
 
             if len(model.loss) > 1:
                 val_loss = sum([history[f"val_{l}_loss"][0] for l in model.loss.keys()])
@@ -184,7 +195,7 @@ class Node:
                     self.training_history[metric] = [metric_value]
                 else:
                     self.training_history[metric].append(metric_value)
-
+        self._tracker.stop()
         assert best_weights
         latest_weights = model.get_weights()
         return latest_weights, best_weights, best_val_loss

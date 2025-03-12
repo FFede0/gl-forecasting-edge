@@ -1,3 +1,6 @@
+from carbontracker.tracker import CarbonTracker
+from datetime import datetime
+
 from utils.model_creators import create_LSTM
 from gossiplearning.config import Config
 
@@ -324,6 +327,12 @@ def train_one_model(
   X_val = validation_data[0]
   Y_val = validation_data[1]
   # train
+  tracker = CarbonTracker(
+    epochs=1, 
+    log_dir="/Users/federicafilippini/Documents/GitHub/FORKs/gl-forecasting-edge/src/TRACKER", 
+    log_file_prefix=datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')
+  )
+  tracker.epoch_start()
   history = model.fit(
     X_train,
     [Y_train[:, fn] for fn in range(config.training.n_output_vars)],
@@ -342,6 +351,8 @@ def train_one_model(
     shuffle = config.training.shuffle_batch,
     # use_multiprocessing = False,
   ).history
+  tracker.epoch_end()
+  tracker.stop()
   return model, history
 
 
