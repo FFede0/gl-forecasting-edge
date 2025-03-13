@@ -7,7 +7,7 @@ import os
 
 
 def plot_network_metrics(
-    avg: pd.DataFrame, std: pd.DataFrame, gossip_dir: str, network: str
+    avg: pd.DataFrame, std: pd.DataFrame, dir: str, network: str, key: str
   ):
   fig, axs = plt.subplots(
     nrows = len(avg.columns), 
@@ -31,10 +31,10 @@ def plot_network_metrics(
       alpha = 0.4
     )
     if idx == len(avg.columns) - 1:
-      axs[idx].set_xlabel("epoch", fontsize = 14)
+      axs[idx].set_xlabel(key, fontsize = 14)
     axs[idx].set_ylabel(col.replace("_", " "), fontsize = 14)
   plt.savefig(
-    os.path.join(gossip_dir, f"{network}_metrics.png"),
+    os.path.join(dir, f"{network}_metrics.png"),
     dpi = 300,
     format = "png",
     bbox_inches = "tight"
@@ -92,43 +92,30 @@ for network in os.listdir(gossip_dir):
 
 logs.to_csv(os.path.join(gossip_dir, "carbontracker.csv"), index = False)
 
-model_fit = logs[logs["event"] == "model_fit"].drop("event", axis = "columns")
 colors = list(mcolors.TABLEAU_COLORS.values())
 
-summary_data = pd.DataFrame()
-for network, network_logs in model_fit.groupby("network"):
-  avg = network_logs.groupby("epoch").mean(numeric_only = True)
-  std = network_logs.groupby("epoch").std(numeric_only = True)
-  plot_network_metrics(avg, std, gossip_dir, network)
-  summary_data = pd.concat(
-    [summary_data, avg.reset_index()], ignore_index = True
-  )
-
-avg = summary_data.groupby("epoch").mean(numeric_only = True)
-std = summary_data.groupby("epoch").std(numeric_only = True)
-plot_network_metrics(avg, std, gossip_dir, "average")
-  
-
-
-for (network, node), log in model_fit.groupby(["network", "node"]):
-  s = pd.DataFrame(
-    log.drop(["node", "network"], axis = "columns").sum(),
-    columns = ["sum"]
-  )
-  a = log.drop(["node", "event", "idx", "network"], axis = "columns").mean()
-
-model_fit[
-  (
-    model_fit["network"] == "9"
-  ) & (
-    model_fit["node"] == "9"
-  )
-]["epoch_durations (s)"].sum()
-
-log["avg_power_usages (W)"].sum()/1000 * 54/3600
-
-log["actual energy (kWh)"].sum()
-
-
-
+for event, event_logs in logs.groupby("event"):
+  event_logs = event_logs.drop("event", axis = "columns")
+  key = "epoch"
+  if not "fit" in event:
+    key = "call"
+    event_logs.rename(
+      columns = {"epoch": key, "epoch_durations (s)": f"{key}_durations (s)"}, 
+      inplace = True
+    )
+  plot_dir = os.path.join(gossip_dir, f"plot_{event}")
+  os.makedirs(plot_dir, exist_ok = True)
+  # average by node
+  summary_data = pd.DataFrame()
+  for network, network_logs in event_logs.groupby("network"):
+    avg = network_logs.groupby(key).mean(numeric_only = True)
+    std = network_logs.groupby(key).std(numeric_only = True)
+    plot_network_metrics(avg, std, plot_dir, network, key)
+    summary_data = pd.concat(
+      [summary_data, avg.reset_index()], ignore_index = True
+    )
+  # average averages over network
+  avg = summary_data.groupby(key).mean(numeric_only = True)
+  std = summary_data.groupby(key).std(numeric_only = True)
+  plot_network_metrics(avg, std, plot_dir, "average", key)
 
