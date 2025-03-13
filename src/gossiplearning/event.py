@@ -68,6 +68,8 @@ def process_send_model_event(
         f"Sending models", time=event.time, node=event.handler_node_id
     )
 
+    node.trackers["send_model"].epoch_start()
+
     # negligible time in checking this, not simulated
     node.active_links = [
         link for link in node.active_links if link.node not in history.stopped_time
@@ -127,6 +129,9 @@ def process_send_model_event(
     )
 
     result.append(SendModelsLoopEvent(time=next_send_time, handler_node_id=node.id))
+
+    node.trackers["send_model"].epoch_end()
+
     return tuple(result)
 
 
@@ -144,6 +149,8 @@ def process_receive_model_event(
     logger.node_event_log(
         "Receiving model", time=event.time, node=event.handler_node_id
     )
+
+    node.trackers["receive_model"].epoch_start()
 
     if node.state == NodeState.TRAINING:
         logger.debug_log(
@@ -188,6 +195,8 @@ def process_receive_model_event(
                 node=node.id, from_time=event.time, to_time=finish_train_time
             )
         )
+    
+    node.trackers["receive_model"].epoch_end()
 
     return tuple(result)
 
